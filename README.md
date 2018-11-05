@@ -83,6 +83,7 @@ Usage
     - `force_K`: optimal geometric distance, see paper (default: 0.2)
     - `force_lambda`: temperature decay constant, see paper (default: 0.8)
     - `force_iteration_count`: number of layout iterations (default: 50)
+    
 &nbsp;
 
 `DynGraphPlot.update()` is used to update the plot and takes as arguments:
@@ -93,10 +94,12 @@ Usage
   - `rmv_nodes`: Iterable containing nodes removed in this update
   
   - `rmv_edges`: Iterable containing edges removed in this update
-&nbsp;
+  
+<br/>
 
 `DynGraphPlot.close()` is used to close the plot
-&nbsp;
+
+<br/>
 
 A `DynGraphPlot` object also has a number of useful accessible properties:
  - `G`: NetworkX object with the current graph
