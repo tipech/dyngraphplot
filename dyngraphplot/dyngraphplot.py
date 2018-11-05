@@ -28,7 +28,7 @@ from pylab import get_current_fig_manager
 
 
 class DynGraphPlot():
-    """Handles plotting and visualization of dynamic graphs changing over time.
+    """Handles plotting and visualization of dynamic graphs.
 
     At initialization, launch the matplotlib figure window and draws the
     initial graph
@@ -73,13 +73,13 @@ class DynGraphPlot():
         self.parameters = { 'pos_radius': 0.62, # reasonable radius
                             'pos_angle': 3,      # mustn't be multiple of pi
                             'pos_score_same': 1, # for unmoved obj
-                            'pos_score_2': 0.25, # obj with 2+ placed neighbors
+                            'pos_score_2': 0.25, # obj with 2+ placed neighbrs
                             'pos_score_1': 0.1,  # obj with 1 placed neighbors
-                            'pos_score_0': 0,    # obj without placed neighbors
+                            'pos_score_0': 0,    # obj without placed neighbrs
                             'pin_a': 0.6,        # pinning rigidity
                             'pin_k': 0.5,        # pinning cutoff
                             'pin_weight': 0.35,  # initial pinning weight
-                            'force_K': 0.2,      # optimal geometric distance
+                            'force_K': 0.8,      # optimal geometric distance
                             'force_lambda': 0.8, # temperature decay constant
                             'force_iteration_count': 50 # layout iterations
                             }
@@ -325,6 +325,7 @@ class DynGraphPlot():
 
                     pos_v = self.layout[v] # get position of u
 
+
                     # calculate repulsion to all other nodes
                     F_repulsion = sum([
                         self.calculate_repulsion(pos_v,self.layout[u], K2)
@@ -337,8 +338,13 @@ class DynGraphPlot():
 
                     # calculate total force and move object
                     F_total = F_repulsion + F_attraction
-                    F_total_mag = math.sqrt(F_total[0]**2 + F_total[1]**2)
-                    if F_total_mag != 0:
+
+                    # make sure F_total isn't 0 or 0,0 because no other nodes
+                    if (isinstance(F_total, np.ndarray) and
+                        (F_total[0] != 0 or F_total[0] != 0)):
+
+                        # calculate magnitude amd adjust position accordingly
+                        F_total_mag = math.sqrt(F_total[0]**2 + F_total[1]**2)
                         new_layout[v] += (min(t, F_total_mag)
                             * F_total / F_total_mag)
 
