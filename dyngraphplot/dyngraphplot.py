@@ -24,7 +24,6 @@ import math, tkinter, matplotlib
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
-from pylab import get_current_fig_manager
 
 
 class DynGraphPlot():
@@ -59,7 +58,13 @@ class DynGraphPlot():
             initial_layout_params={'k': 0.8},    # spring elasticity
             dynamic_layout_params={}):
 
-        self.G = nx.Graph(graph)         # get graph object
+        # if it's a networkX graph, save it as is
+        if isinstance(graph, nx.Graph) or issubclass(type(graph), nx.Graph):
+            self.G = graph
+
+        # otherwise read it into a graph (won't be directed)
+        else:
+            self.G = nx.Graph(graph)
 
         # set display options and update with any user specified
         self.options = {'node_size': 800,
