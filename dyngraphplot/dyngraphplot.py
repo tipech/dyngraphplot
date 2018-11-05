@@ -13,10 +13,10 @@
     The implementation heavily relies on the networkx module.
 
     Example:
+        inport networkx as nx
         from dyngraphplot import DynGraphPlot
-        G = nx.fast_gnp_random_graph(50, 0.1)
-        visualizer = DynGraphPlot(G)
-        visualizer.update(G, [50,51], [(50,20),(51,30), (50,51)])
+        plot = DynGraphPlot(nx.fast_gnp_random_graph(50, 0.1))
+        plot.update([50,51], [(50,20),(51,30), (50,51)])
 
 """
 
@@ -24,6 +24,7 @@ import math, tkinter, matplotlib
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+from pprint import pprint
 
 
 class DynGraphPlot():
@@ -85,7 +86,7 @@ class DynGraphPlot():
                             'pin_a': 0.6,        # pinning rigidity
                             'pin_k': 0.5,        # pinning cutoff
                             'pin_weight': 0.35,  # initial pinning weight
-                            'force_K': 0.8,      # optimal geometric distance
+                            'force_K': 0.2,      # optimal geometric distance
                             'force_lambda': 0.8, # temperature decay constant
                             'force_iteration_count': 50 # layout iterations
                             }
@@ -162,6 +163,9 @@ class DynGraphPlot():
 
         """
 
+        # get the size of the plot box, max(width,height)
+        size = max(np.ptp([node for node in self.layout.values()], 0))
+
         # old nodes have perfect positioning confidence 
         nx.set_node_attributes(self.G, self.params['pos_score_same'],
             'pos_score')
@@ -204,9 +208,12 @@ class DynGraphPlot():
             else:
 
                 # place in circle around center
-                radius = self.params['pos_radius']
+                radius = 0.5 * size * self.params['pos_radius']
                 angle = self._count * self.params['pos_angle'] # rotate
                 self._count += 1
+
+                print(size)
+                print(radius)
 
                 # rotate based on count, nodes wont overlap for 300 rotations
                 pos_x = radius * math.cos(angle)
@@ -410,6 +417,13 @@ class DynGraphPlot():
 
         """
 
+        # get old and new bounding box size [width, height]
+        old_box = np.ptp([node for node in self.layout.values()], 0)
+        new_box = np.ptp([node for node in new_layout.values()], 0)
+
+        # get scale factor, fraction of old and new box areas
+        scale = old_box[0] * old_box[1] / new_box[0] * old_box[1]
+
         # go through moved nodes
         for node in self.G.nodes:
             if (new_layout[node][0] != self.layout[node][0] or 
@@ -417,7 +431,7 @@ class DynGraphPlot():
 
                 # linearly interpolate last new with old
                 self.layout[node] = ((1 - self.G.node[node]['pin_weight'])
-                    * (new_layout[node] - self.layout[node]))
+                    * (new_layout[node] - self.layout[node])) * scale
 
 
     def draw(self):
