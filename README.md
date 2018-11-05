@@ -63,12 +63,12 @@ Usage
 
   - `initial_layout`: NetworkX layout function (default: `networkx.spring_layout`)
 
-  - `initial_layout_parameters`: Parameters dictionary for initial layout (default: `{'k': 0.8}`)
+  - `initial_layout_parameters`: Parameters dictionary for initial layout (default: `{'k': 0.8}`)  
     _Note: `k` is the elasticity parameter for spring layout_
   
   - `dynamic_layout_parameters`: Parameters dictionary for dynamic layout
     - `pos_radius`: # radius for placing unconnected new nodes (default: 0.618)
-    - `pos_angle`: # angle step for placing unconnected new nodes (default: 3)
+    - `pos_angle`: # angle step for placing unconnected new nodes (default: 3)  
       _Note: this shouldn't be multiple of pi or nodes will often overlap_
     - `pos_score_same`: positioning confidence score for unmoved nodes (default: 1)
     - `pos_score_2`: positioning confidence score for nodes with 2+ placed neighbors (default: 0.25)
@@ -80,7 +80,7 @@ Usage
     - `force_K`: optimal geometric distance, see paper (default: 0.2)
     - `force_lambda`: temperature decay constant, see paper (default: 0.8)
     - `force_iteration_count`: number of layout iterations (default: 50)
-
+  
 
 `update` takes as arguments:
   - `new_nodes`: Iterable containing nodes added in this update
@@ -90,7 +90,7 @@ Usage
   - `rmv_nodes`: Iterable containing nodes removed in this update
   
   - `rmv_edges`: Iterable containing edges removed in this update
-
+  
 
 `DynGraphPlot` also has a number of useful accessable properties:
  - `G`: NetworkX object with the current graph
