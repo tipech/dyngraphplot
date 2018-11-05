@@ -23,11 +23,25 @@ from dyngraphplot import DynGraphPlot
 # create a random graph and plot it
 G = nx.fast_gnp_random_graph(50, 0.1)
 visualizer = DynGraphPlot(G)
+```
 
+And afterwards, to update the graph:
+```python
 # update nodes and edges in the graph
 new_nodes = [50,51]
 new_edges = [(50,20),(51,30), (50,51)]
 visualizer.update(G, new_nodes, new_edges)
+```
+
+Note that `update` returns the updated `networkx.graph` object, so you can do:
+```python
+# update a plot and get result
+new_nodes = [50,51]
+new_G = visualizer.update(G, new_nodes)
+
+# update again
+new_edges = [(50,20),(51,30), (50,51)]
+visualizer.update(new_G, new_edges)
 ```
 
 Notes
