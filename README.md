@@ -61,15 +61,18 @@ Usage
   
   - `window_box`: Window position and shape, format: `[x, y, width, height]`
 
-  - `draw_options`: Graph visual options for `networkx.draw()`
-    - arguments are the same as `networkx.draw()`, plus `edgecolors`
+  - `draw_options`: Graph visual options for `networkx.draw()`  
+    arguments are the same as `networkx.draw()`, plus:
+    - `edgecolors`: Set color of node borders
+    - `edge_labels`: Edge labels in a dictionary keyed by edge two-tuple of text labels
+    - `edge_label_attr`: Name of edge attribute to be used as edge label, edges that have that attribute are drawn with it as label
 
   - `initial_layout`: NetworkX layout function (default: `networkx.spring_layout`)
 
-  - `initial_layout_parameters`: Parameters dictionary for initial layout (default: `{'k': 0.8}`)  
+  - `initial_layout_params`: Parameters dictionary for initial layout (default: `{'k': 0.8}`)  
     _Note: `k` is the elasticity parameter for spring layout_
   
-  - `dynamic_layout_parameters`: Parameters dictionary for dynamic layout
+  - `dynamic_layout_params`: Parameters dictionary for dynamic layout
     - `pos_radius`: # radius for placing unconnected new nodes (default: 0.618)
     - `pos_angle`: # angle step for placing unconnected new nodes (default: 3)  
       _Note: this shouldn't be multiple of pi or nodes will often overlap_
@@ -106,7 +109,7 @@ A `DynGraphPlot` object also has a number of useful accessible properties:
 
  - `options`: the `draw_options` used
 
- - `parameters`: the `dynamic_layout_parameters` used
+ - `params`: the `dynamic_layout_params` used
 
  - `layout`: Dictionary with `[x,y]` position of every node
  

@@ -37,15 +37,16 @@ class DynGraphPlot():
         G: NetworkX graph to be drawn
         window_box: Window position and shape, format: [x, y, width, height]
         draw_options: Graph visual options for networkx.draw()
+            also supports edge_attr_label: select attribute as edge label
         initial_layout: NetworkX layout function (default: nx.spring_layout)
-        initial_layout_parameters: Parameters dictionary for initial layout
+        initial_layout_params: Parameters dictionary for initial layout
             (default: {'k': 0.8})
-        dynamic_layout_parameters: Parameters dictionary for dynamic layout
+        dynamic_layout_params: Parameters dictionary for dynamic layout
 
     Attributes:
         G: NetworkX graph or any object that is valid for networkx.Graph()
         options: Graph visual options for networkx.draw()
-        parameters: Parameters dictionary for dynamic layout
+        params: Parameters dictionary for dynamic layout
         layout: Dictionary with [x,y] position of every node
         figure: The matplotlib figure being drawn
         ax: The axis of the matplotlib figure being drawn with the graph
@@ -55,14 +56,14 @@ class DynGraphPlot():
     
     def __init__(self, graph, window_box=None, draw_options={},
             initial_layout=nx.spring_layout,        # default layout is spring
-            initial_layout_parameters={'k': 0.8},    # spring elasticity
-            dynamic_layout_parameters={}):
+            initial_layout_params={'k': 0.8},    # spring elasticity
+            dynamic_layout_params={}):
 
         self.G = nx.Graph(graph)         # get graph object
 
         # set display options and update with any user specified
         self.options = {'node_size': 800,
-                        'node_color': [0.5, 0.7, 0.95, 0.7], # RGB(A)
+                        'node_color': '#80B3F2B3', # Light blue
                         'linewidth': 0.2,
                         'edgecolors': 'black', 
                         'width': 0.5,
@@ -70,7 +71,7 @@ class DynGraphPlot():
         self.options.update(draw_options)
 
         # set layout properties and update with any user specified (see paper)
-        self.parameters = { 'pos_radius': 0.62, # reasonable radius
+        self.params = { 'pos_radius': 0.62, # reasonable radius
                             'pos_angle': 3,      # mustn't be multiple of pi
                             'pos_score_same': 1, # for unmoved obj
                             'pos_score_2': 0.25, # obj with 2+ placed neighbrs
@@ -83,10 +84,10 @@ class DynGraphPlot():
                             'force_lambda': 0.8, # temperature decay constant
                             'force_iteration_count': 50 # layout iterations
                             }
-        self.parameters.update(dynamic_layout_parameters)
+        self.params.update(dynamic_layout_params)
 
         # apply initial layout
-        self.layout = initial_layout(self.G, **initial_layout_parameters)
+        self.layout = initial_layout(self.G, **initial_layout_params)
         
         self._count = 0 # count unplaceble that we put in circle around center
 
@@ -157,7 +158,7 @@ class DynGraphPlot():
         """
 
         # old nodes have perfect positioning confidence 
-        nx.set_node_attributes(self.G, self.parameters['pos_score_same'],
+        nx.set_node_attributes(self.G, self.params['pos_score_same'],
             'pos_score')
 
         # place new nodes (assuming they were added in same order)
@@ -183,7 +184,7 @@ class DynGraphPlot():
                 self.layout[new_node] = np.mean(pos_nodes, axis=0)
 
                 # more old links, better positioning confidence
-                pos_score = self.parameters['pos_score_2'] # medium confidence
+                pos_score = self.params['pos_score_2'] # medium confidence
 
             # single positioning connection
             elif len(pos_nodes) == 1:
@@ -192,14 +193,14 @@ class DynGraphPlot():
                 self.layout[new_node] = np.array([pos_nodes[0][0] * 1.2,
                     pos_nodes[0][1] * 1.2])
 
-                pos_score = self.parameters['pos_score_1'] # low confidence
+                pos_score = self.params['pos_score_1'] # low confidence
 
             # no positioning connections
             else:
 
                 # place in circle around center
-                radius = self.parameters['pos_radius']
-                angle = self._count * self.parameters['pos_angle'] # rotate
+                radius = self.params['pos_radius']
+                angle = self._count * self.params['pos_angle'] # rotate
                 self._count += 1
 
                 # rotate based on count, nodes wont overlap for 300 rotations
@@ -207,7 +208,7 @@ class DynGraphPlot():
                 pos_y = radius * math.sin(angle)
                 self.layout[new_node] = np.array([pos_x, pos_y])
 
-                pos_score = self.parameters['pos_score_1'] # no confidence
+                pos_score = self.params['pos_score_1'] # no confidence
 
             self.G.add_node(new_node, pos_score=pos_score)
 
@@ -219,9 +220,9 @@ class DynGraphPlot():
             affected_nodes: Nodes whose neighborhood changes but remain in G
 
         """
-        a = self.parameters['pin_a'] # higher a -> lower neighbor influence
-        k = self.parameters['pin_k'] # D cutoff parameter
-        w_initial_pin = self.parameters['pin_weight'] # initial pin weight
+        a = self.params['pin_a'] # higher a -> lower neighbor influence
+        k = self.params['pin_k'] # D cutoff parameter
+        w_initial_pin = self.params['pin_weight'] # initial pin weight
 
         # local pin weights calculation sweep
         for node in self.G.nodes:
@@ -305,12 +306,12 @@ class DynGraphPlot():
             The new layout dictionary with node positions changed
 
         """
-        K = self.parameters['force_K']      # optimal geometric node distance
+        K = self.params['force_K']      # optimal geometric node distance
         K2 = K**2                           # pre-computing square of K
         t = K * math.sqrt(len(self.G))      # initial annealing temp,see paper
-        l = self.parameters['force_lambda'] # temperature decay constant
+        l = self.params['force_lambda'] # temperature decay constant
 
-        iter_count = self.parameters['force_iteration_count'] # nr of iters
+        iter_count = self.params['force_iteration_count'] # nr of iters
         frac_done = 0                       # fraction counter
         frac_increment = 1 / iter_count     # fraction counter increment
 
@@ -429,6 +430,27 @@ class DynGraphPlot():
             nodes.set_edgecolor(options['edgecolors'])
         nx.draw_networkx_edges(self.G, **options)
         nx.draw_networkx_labels(self.G, **options)
+
+        edge_labels = {}
+
+        # edge label dictonary was passed
+        if 'edge_labels' in self.options:
+            edge_labels = self.options['edge_labels']
+
+        # edge attribute was set as label
+        if 'edge_label_attr' in self.options:
+
+            # update edge_labels dictionary with label edge attribute
+            # but for each edge only if that edge has that attribute
+            edge_labels.update({
+                (edge[0], edge[1]): edge[2][self.options['edge_label_attr']]
+                for edge in self.G.edges(data=True)
+                if self.options['edge_label_attr'] in edge[2]})
+
+        # if any edge labels were actually specified, draw them
+        if len(edge_labels) > 0:
+            options['edge_labels'] = edge_labels
+            nx.draw_networkx_edge_labels(self.G, **options)
 
         self.figure.canvas.draw()                 # draw graph
         self.figure.canvas.start_event_loop(0.01) # freeze fix
