@@ -84,7 +84,7 @@ Usage
     - `force_lambda`: temperature decay constant, see paper (default: 0.8)
     - `force_iteration_count`: number of layout iterations (default: 50)
     
-&nbsp;
+<br/>
 
 `DynGraphPlot.update()` is used to update the plot and takes as arguments:
   - `new_nodes`: Iterable containing nodes added in this update
