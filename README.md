@@ -41,19 +41,22 @@ plot.update(new_nodes, new_edges)
 
 Note that `update` returns the updated `networkx.graph` object, so you can do:
 ```python
-# update a plot and get result
+# update a plot, get result and close plot
 new_nodes = [50,51]
 new_G = plot.update(new_nodes)
+plot.close()
 
+# create a new plot
+new_plot = DynGraphPlot(new_G)
 # update again
 new_edges = [(50,20),(51,30), (50,51)]
-plot.update(new_edges=new_edges)
+new_plot.update(new_edges=new_edges)
 ```
 
 Usage
 ----
 
-`DynGraphPlot` takes as arguments:
+`DynGraphPlot()` is used to initialize the plot and takes as arguments:
   - `G`: NetworkX graph or any object that is valid for `networkx.Graph()`
   
   - `window_box`: Window position and shape, format: `[x, y, width, height]`
@@ -80,9 +83,9 @@ Usage
     - `force_K`: optimal geometric distance, see paper (default: 0.2)
     - `force_lambda`: temperature decay constant, see paper (default: 0.8)
     - `force_iteration_count`: number of layout iterations (default: 50)
-  
+&nbsp;
 
-`update` takes as arguments:
+`DynGraphPlot.update()` is used to update the plot and takes as arguments:
   - `new_nodes`: Iterable containing nodes added in this update
   
   - `new_edges`: Iterable containing edges added in this update
@@ -90,9 +93,12 @@ Usage
   - `rmv_nodes`: Iterable containing nodes removed in this update
   
   - `rmv_edges`: Iterable containing edges removed in this update
-  
+&nbsp;
 
-`DynGraphPlot` also has a number of useful accessable properties:
+`DynGraphPlot.close()` is used to close the plot
+&nbsp;
+
+A `DynGraphPlot` object also has a number of useful accessible properties:
  - `G`: NetworkX object with the current graph
 
  - `options`: the `draw_options` used
