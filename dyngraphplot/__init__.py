@@ -1,1 +1,1 @@
-name = "dyngraphplot"
+from .dyngraphplot import DynGraphPlot
