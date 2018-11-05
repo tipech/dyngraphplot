@@ -419,9 +419,10 @@ class DynGraphPlot():
 
         # workaround for draw_networkx() not passing edgecolors to scatter.
         nodes = nx.draw_networkx_nodes(self.G, **options)
-        nodes.set_edgecolor(options['edgecolors'])
-        nodes = nx.draw_networkx_edges(self.G, **options)
-        nodes = nx.draw_networkx_labels(self.G, **options)
+        if nodes is not None:
+            nodes.set_edgecolor(options['edgecolors'])
+        nx.draw_networkx_edges(self.G, **options)
+        nx.draw_networkx_labels(self.G, **options)
 
         self.figure.canvas.draw()                 # draw graph
         self.figure.canvas.start_event_loop(0.01) # freeze fix
