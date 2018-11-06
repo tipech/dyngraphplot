@@ -86,6 +86,7 @@ Usage
     - `force_K`: optimal geometric distance, see paper (default: 0.1)
     - `force_lambda`: temperature decay constant, see paper (default: 0.9)
     - `force_iteration_count`: number of layout iterations (default: 50)
+    - `force_dampen`: dampening factor for force application (default: 0.1)
     
 <br/>
 
