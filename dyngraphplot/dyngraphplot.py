@@ -163,8 +163,11 @@ class DynGraphPlot():
 
         """
 
-        # get the size of the plot box, max(width,height)
-        size = max(np.ptp([node for node in self.layout.values()], 0))
+        # if graph has nodes, get size of the plot box, i.e. max(width,height)
+        if len(self.G) > 0:
+            size = max(np.ptp([node for node in self.layout.values()], 0))
+        else:
+            size = 2 # usual matplotlib size
 
         # old nodes have perfect positioning confidence 
         nx.set_node_attributes(self.G, self.params['pos_score_same'],
