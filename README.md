@@ -39,18 +39,13 @@ new_edges = [(50,20),(51,30), (50,51)]
 plot.update(new_nodes, new_edges)
 ```
 
-Note that `update` returns the updated `networkx.graph` object, so you can do:
+Note that `update` returns the updated `networkx.Graph` object, so you can do:
 ```python
 # update a plot, get result and close plot
 new_nodes = [50,51]
 new_G = plot.update(new_nodes)
+new_layout = plot.layout
 plot.close()
-
-# create a new plot
-new_plot = DynGraphPlot(new_G)
-# update again
-new_edges = [(50,20),(51,30), (50,51)]
-new_plot.update(new_edges=new_edges)
 ```
 
 Usage
@@ -58,8 +53,19 @@ Usage
 
 `DynGraphPlot()` is used to initialize the plot and takes as arguments:
   - `G`: NetworkX graph or any object that is valid for `networkx.Graph()`
+
+  - `mode`: Drawing mode for the plot, options are:
+    - `'non-blocking'`: Show the plot and update it without blocking running proccess (default)
+    - `'blocking'`: Show the plot, block running proccess, must close plot to resume (matplotlib bug doesn't apply in this mode, window is responsive)
+    - `'save'`: Save the dynamic graph as a sequence of files in a directory
+    - `'hidden'`: Don't plot the graph at all (useful for getting layout x,y of nodes)   
   
-  - `window_box`: Window position and shape, format: `[x, y, width, height]`
+  - `plot_box`: Plot position and shape, format: `[x, y, width, height]`
+
+  - `save_dir`: Directory to save the plot sequence in `'save'` mode
+
+  - `save_name`: Filename for the plot files in `'save'` mode (default: `graph.png`)
+    individual graphs will be saved as `graph_0.png`, `graph_1.png`, etc.
 
   - `draw_options`: Graph visual options for `networkx.draw()`  
     arguments are the same as `networkx.draw()`, plus:

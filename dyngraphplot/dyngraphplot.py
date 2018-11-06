@@ -20,7 +20,7 @@
 
 """
 
-import math, tkinter, matplotlib, copy
+import os, math, copy, tkinter, matplotlib
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -34,7 +34,11 @@ class DynGraphPlot():
 
     Args:
         G: NetworkX graph to be drawn
-        window_box: Window position and shape, format: [x, y, width, height]
+        mode: drawing mode, options: 'blocking','non-blocking','save','hidden'
+            (default: 'non-blocking')
+        save_dir: the directory to save figure sequence in (if in 'save' mode)
+        save_name: the figure save_name for display or saving purposes
+        plot_box: Window position and shape, format: [x, y, width, height]
         draw_options: Graph visual options for networkx.draw()
             also supports edge_attr_label: select attribute as edge label
         initial_layout: NetworkX layout function (default: nx.spring_layout)
@@ -53,18 +57,41 @@ class DynGraphPlot():
 
     """
     
-    def __init__(self, graph, window_box=None, draw_options={},
-            initial_layout=nx.spring_layout,        # default layout is spring
-            initial_layout_params={'k': 0.8},    # spring elasticity
+    def __init__(self, G, mode="non-blocking",
+            save_dir="./",
+            save_name="graph",
+            plot_box=None,
+            draw_options={},
+            initial_layout=nx.spring_layout,
+            initial_layout_params={'k': 0.8},
             dynamic_layout_params={}):
 
         # if it's a networkX graph, save it as is
-        if isinstance(graph, nx.Graph) or issubclass(type(graph), nx.Graph):
-            self.G = graph
+        if isinstance(G, nx.Graph) or issubclass(type(G), nx.Graph):
+            self.G = G
 
         # otherwise read it into a graph (won't be directed)
         else:
-            self.G = nx.Graph(graph)
+            self.G = nx.Graph(G)
+
+        # get drawing mode
+        if mode in ['blocking','non-blocking','save','hidden']:
+            self.mode = mode
+        else:
+            raise(ValueError("Invalid plot mode!"))
+
+        # store arguments
+        self.save_dir = save_dir
+        self.save_name = save_name
+        self.plot_box = plot_box
+
+        # setup store directory
+        if mode == 'save':
+            if not os.path.isdir(save_dir):
+                os.mkdir(save_dir)
+            else:
+                raise(IsADirectoryError("Save directory already exists!"))
+
 
         # set display options and update with any user specified
         self.options = {'node_size': 800,
@@ -95,17 +122,19 @@ class DynGraphPlot():
         # apply initial layout
         self.layout = initial_layout(self.G, **initial_layout_params)
         
+        self._frame = 0 # count how many updates there have been
         self._count = 0 # count unplaceble that we put in circle around center
 
         # plotting graph
-        plt.autoscale(tight=True)             # configure autoscaling
-        plt.ion()                             # matplotlib interactive mode
-        self.figure, self.ax = plt.subplots() # setup figure
-        self.set_figure_window(window_box)    # position window
-        self.ax.axis("off")                   # hide axis
-        self.ax.set_position([0, 0, 1, 1])    # use entire box
-        self.options.update({'ax': self.ax})  # include axis in options
-        self.draw()                           # draw initial graph
+
+        # if non-blocking, enable matplotlib interactive mode
+        if self.mode == 'non-blocking':
+            plt.ion()
+            self.setup_figure()  # setup the plot
+
+        if self.mode != 'hidden':
+            self.draw()          # draw initial graph
+
 
 
     def update(self, new_nodes=[], new_edges=[], rmv_nodes=[], rmv_edges=[]):
@@ -147,8 +176,12 @@ class DynGraphPlot():
         new_layout = self.move_nodes()
         self.interpolate_nodes(new_layout)
 
+        self._frame += 1    # count one more update
+
         # draw results
-        self.draw()
+        if self.mode != 'hidden':
+            self.draw()
+
 
         # return the updated network
         return self.G
@@ -443,8 +476,23 @@ class DynGraphPlot():
                     * (new_layout[node] - self.layout[node]))
 
 
+    def setup_figure(self):
+        """Create a plot and configure the figure in it."""
+
+        self.figure, self.ax = plt.subplots() # setup figure
+        self.set_figure_window()              # position window
+        self.ax.axis("off")                   # hide axis
+        self.ax.autoscale(tight=True)         # configure autoscaling
+        self.ax.set_position([0, 0, 1, 1])    # use entire box
+        self.options.update({'ax': self.ax})  # include axis in options
+
+
     def draw(self):
         """Draw or update the drawing of the current graph plot."""
+
+        # re-create figure if not in interactive mode
+        if self.mode == 'blocking' or self.mode == 'save':
+            self.setup_figure()
 
         # insert new layout in options
         options = self.options
@@ -480,25 +528,44 @@ class DynGraphPlot():
             options['edge_labels'] = edge_labels
             nx.draw_networkx_edge_labels(self.G, **options)
 
-        self.figure.canvas.draw()                 # draw graph
-        self.figure.canvas.start_event_loop(0.01) # freeze fix
+        self.figure.canvas.draw()   # draw graph
+
+        # blocking mode, show()
+        if self.mode == 'blocking':
+            plt.show()
+
+        # interactive mode, apply a small delay to allow GUI drawing
+        elif self.mode == 'non-blocking':
+            self.figure.canvas.start_event_loop(0.01) # freeze fix
+
+        # save mode, save each iteration to a different file
+        elif self.mode == 'save':
+            directory = self.save_dir.rstrip('/') + '/'
+
+            # make sure extension exists, then split filename,extension
+            name = os.path.splitext( self.save_name if '.' in self.save_name
+                                else self.save_name + '.png')
+
+            # add frame number in between
+            frame_name = name[0] + '_' + str(self._frame) + name[1]
+            plt.savefig(directory + frame_name)
 
 
-    def set_figure_window(self, window_box):
+    def set_figure_window(self):
         """Set figure window upper left corner and size in pixels.
 
         Sometimes may not work depending on OS and/or GUI backend.
 
         Args:
-            window_box: Window position and shape, format: [x,y,width,height]
+            plot_box: Window position and shape, format: [x,y,width,height]
         
         """
 
         # if actual arguments were provided
-        if window_box != None:
+        if self.plot_box != None:
 
             # get arguments
-            x, y, width, height = window_box
+            x, y, width, height = self.plot_box
 
             # get screen PPI
             tk_root = tkinter.Tk()
@@ -510,22 +577,27 @@ class DynGraphPlot():
             self.figure.set_size_inches(width / ppi, height / ppi,
                 forward=True)
 
-            # get the matplotlib backend for the position
-            backend = matplotlib.get_backend()
+            # if in mode where plot window exists
+            if self.mode == 'blocking' or self.mode == 'non-blocking':
 
-            # depending on backend, use appropriate method
-            if backend == 'TkAgg':
-                self.figure.canvas.manager.window.wm_geometry("+%d+%d"
-                    % (x, y))
-            elif backend == 'WXAgg':
-                self.figure.canvas.manager.window.SetPosition((x, y))
-            else:
-                # This works for QT and GTK
-                # You can also use window.setGeometry
-                self.figure.canvas.manager.window.move(x, y)
+                # get the matplotlib backend for the position
+                backend = matplotlib.get_backend()
+
+                # depending on backend, use appropriate method
+                if backend == 'TkAgg':
+                    self.figure.canvas.manager.window.wm_geometry("+%d+%d"
+                        % (x, y))
+                elif backend == 'WXAgg':
+                    self.figure.canvas.manager.window.SetPosition((x, y))
+                else:
+                    # This works for QT and GTK
+                    # You can also use window.setGeometry
+                    self.figure.canvas.manager.window.move(x, y)
 
 
     def close(self):
         """Close the figure window."""
 
-        plt.close(self.figure)
+        # only valid in non-blocking mode
+        if self.mode == 'non-blocking':
+            plt.close(self.figure)
