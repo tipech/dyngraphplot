@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="dyngraphplot",
-    version="1.1.2",
+    version="1.1.3",
     author="Tilemachos Pechlivanoglou",
     author_email="tppehli@gmail.com",
     description="A module for plotting dynamic force-directed graphs",
