@@ -15,7 +15,7 @@ Installation
 
 To install dyngraphplot, do:
 ```sh
-$ pip install dyngrahplot
+$ pip install dyngraphplot
 ```
 
 Simple Example
@@ -83,8 +83,8 @@ Usage
     - `pin_a`: pinning rigidity, see paper (default: 0.6)
     - `pin_k`: pinning cutoff, see paper (default: 0.5)
     - `pin_weight`: initial pinning weight, see paper (default: 0.35)
-    - `force_K`: optimal geometric distance, see paper (default: 0.2)
-    - `force_lambda`: temperature decay constant, see paper (default: 0.8)
+    - `force_K`: optimal geometric distance, see paper (default: 0.1)
+    - `force_lambda`: temperature decay constant, see paper (default: 0.9)
     - `force_iteration_count`: number of layout iterations (default: 50)
     
 <br/>

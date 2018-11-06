@@ -20,11 +20,10 @@
 
 """
 
-import math, tkinter, matplotlib
+import math, tkinter, matplotlib, copy
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
-from pprint import pprint
 
 
 class DynGraphPlot():
@@ -77,7 +76,7 @@ class DynGraphPlot():
         self.options.update(draw_options)
 
         # set layout properties and update with any user specified (see paper)
-        self.params = { 'pos_radius': 0.62, # reasonable radius
+        self.params = { 'pos_radius': 0.5,       # reasonable radius
                             'pos_angle': 3,      # mustn't be multiple of pi
                             'pos_score_same': 1, # for unmoved obj
                             'pos_score_2': 0.25, # obj with 2+ placed neighbrs
@@ -86,9 +85,10 @@ class DynGraphPlot():
                             'pin_a': 0.6,        # pinning rigidity
                             'pin_k': 0.5,        # pinning cutoff
                             'pin_weight': 0.35,  # initial pinning weight
-                            'force_K': 0.2,      # optimal geometric distance
-                            'force_lambda': 0.8, # temperature decay constant
-                            'force_iteration_count': 50 # layout iterations
+                            'force_K': 0.1,      # optimal geometric distance
+                            'force_lambda': 0.9, # temperature decay constant
+                            'force_iteration_count': 50, # layout iterations
+                            'force_dampen': 0.1  # motion dampening factor
                             }
         self.params.update(dynamic_layout_params)
 
@@ -131,7 +131,7 @@ class DynGraphPlot():
             + [node for edge in new_edges for node in [edge[0],edge[1]]]
             + [node for edge in rmv_edges for node in [edge[0],edge[1]]]
             + [neighbor for node in rmv_nodes
-                for neighbor in self.G.neighbors(node)])
+                for neighbor in nx.all_neighbors(self.G, node)])
             - set(rmv_nodes))
 
         # step 1 of paper
@@ -212,15 +212,12 @@ class DynGraphPlot():
                 angle = self._count * self.params['pos_angle'] # rotate
                 self._count += 1
 
-                print(size)
-                print(radius)
-
                 # rotate based on count, nodes wont overlap for 300 rotations
                 pos_x = radius * math.cos(angle)
                 pos_y = radius * math.sin(angle)
                 self.layout[new_node] = np.array([pos_x, pos_y])
 
-                pos_score = self.params['pos_score_1'] # no confidence
+                pos_score = self.params['pos_score_0'] # no confidence
 
             self.G.add_node(new_node, pos_score=pos_score)
 
@@ -239,18 +236,23 @@ class DynGraphPlot():
         # local pin weights calculation sweep
         for node in self.G.nodes:
 
-            # calculate average pos_score of neighbors
-            scores = [self.G.node[neighbor]['pos_score']
-                for neighbor in self.G.neighbors(node)]
-            if len(scores) > 0:
-                neighbor_score = np.mean(scores)
-            else:
-                neighbor_score = 0
+            # if there are neighbors
+            if len(list(nx.all_neighbors(self.G, node))) > 0:
             
-            # calculate pin weight
-            self.G.node[node]['pin_weight'] = (
-                a * self.G.node[node]['pos_score']
-                 + (1 - a) * neighbor_score)
+                # calculate average pos_score of neighbors
+                scores = [self.G.node[neighbor]['pos_score']
+                    for neighbor in nx.all_neighbors(self.G, node)]
+                neighbor_score = np.mean(scores)
+
+                # calculate pin weight
+                self.G.node[node]['pin_weight'] = (
+                    a * self.G.node[node]['pos_score']
+                     + (1 - a) * neighbor_score)
+
+            # otherwise pin weight is just the node's pos_score
+            else:
+                node_attributes = self.G.node[node]
+                node_attributes['pin_weight'] = node_attributes['pos_score']
 
         D = {}    # Distance class dictionary (see paper)
 
@@ -265,7 +267,7 @@ class DynGraphPlot():
 
             # calculate neighbors of previous D
             neighbors = set([ neighbor for node in D[i-1]
-                for neighbor in list(self.G.neighbors(node))])
+                for neighbor in list(nx.all_neighbors(self.G, node))])
 
             # calculate next distance class, restrict to only unvisited nodes
             new_D = neighbors.intersection(remaining_nodes)
@@ -288,12 +290,14 @@ class DynGraphPlot():
         # global sweep, assign pinning weights to classes of nodes
         for i in D:
 
-            # special case where new nodes affect entire graph
+
+            # special case, new nodes are disconnected or affect entire graph
             if d_cutoff == 0:
+
 
                 # set pin weight to zero for all nodes
                 for node in D[i]:
-                    self.G.node[node]['pin_weight'] = 0
+                    self.G.node[node]['pin_weight'] = w_initial_pin
 
             # nodes beyond cutoff
             elif i > d_cutoff:
@@ -319,45 +323,56 @@ class DynGraphPlot():
 
         """
         K = self.params['force_K']      # optimal geometric node distance
-        K2 = K**2                           # pre-computing square of K
-        t = K * math.sqrt(len(self.G))      # initial annealing temp,see paper
+        t = K * math.sqrt(len(self.G))  # initial annealing temp,see paper
         l = self.params['force_lambda'] # temperature decay constant
+        d = self.params['force_dampen'] # movement dampening factor
 
         iter_count = self.params['force_iteration_count'] # nr of iters
         frac_done = 0                       # fraction counter
         frac_increment = 1 / iter_count     # fraction counter increment
 
-        new_layout = self.layout.copy()     # will hold the next layout
+        new_layout = copy.deepcopy(self.layout) # will hold the next layout
 
         # iterations loop
-        for i in range(1, iter_count):
+        for i in range(0, iter_count):
             
             # force calculation loop, O(n^2) because no partitioning
             for v in self.G.nodes:
                 if frac_done > self.G.node[v]['pin_weight']:
 
-                    pos_v = self.layout[v] # get position of u
+                    pos_v = new_layout[v] # get position of u
 
+                    # if there are other nodes in the graph
+                    if len(self.G.nodes) > 1:
 
-                    # calculate repulsion to all other nodes
-                    F_repulsion = sum([
-                        self.calculate_repulsion(pos_v,self.layout[u], K2)
-                        for u in self.G.nodes if u != v])
+                        # calculate repulsion to all other nodes
+                        F_repulsion = K**2 * sum([
+                            self.calculate_repulsion(pos_v,new_layout[u])
+                            for u in self.G.nodes if u != v])
 
-                    # calculate attraction to connected nodes
-                    F_attraction = sum([
-                        self.calculate_attraction(pos_v, self.layout[u], K)
-                        for u in self.G.neighbors(v)])
+                        # if node has neighbors
+                        if len(list(nx.all_neighbors(self.G, v))) > 0:
 
-                    # calculate total force and move object
-                    F_total = F_repulsion + F_attraction
+                            # calculate attraction to connected nodes
+                            F_attraction = sum([self.calculate_attraction(
+                                pos_v, new_layout[u])
+                                for u in nx.all_neighbors(self.G, v)
+                                if u != v]) / K
 
-                    # make sure F_total isn't 0 or 0,0 because no other nodes
-                    if (isinstance(F_total, np.ndarray) and
-                        (F_total[0] != 0 or F_total[0] != 0)):
+                        # node has no neighbors
+                        else:
+
+                            # calculate attraction to center of plot
+                            F_attraction = (self.calculate_attraction(
+                                pos_v, np.array([0, 0])) / K)
+
+                        # calculate total force with dampening
+                        F_total = d * (F_repulsion + F_attraction)
 
                         # calculate magnitude amd adjust position accordingly
-                        F_total_mag = math.sqrt(F_total[0]**2 + F_total[1]**2)
+                        F_total_mag = math.sqrt(F_total.dot(F_total))
+                        F_total_mag = max(F_total_mag, 0.0001) # prevent 0
+
                         new_layout[v] += (min(t, F_total_mag)
                             * F_total / F_total_mag)
 
@@ -369,44 +384,42 @@ class DynGraphPlot():
         return new_layout
 
 
-    def calculate_repulsion(self, pos_v, pos_u, K2):
+    def calculate_repulsion(self, pos_v, pos_u):
         """Calculate the repulsion force between two nodes.
 
         Args:
             pos_v: Position of first node v
             pos_u: Position of second node u
-            K2: Optimal distance parameter^2, precomputed to save on time
 
         """
         diff = pos_v - pos_u
 
-        # in case points overlap
-        if diff[0] == 0 and diff[1] == 0:
-            return [K2, K2]
+        # in case points overlap exactly in either dimension
+        if diff[0] == 0:
+            diff[0] = 0.0001
+        if diff[1] == 0:
+            diff[1] = 0.0001
 
-        # otherwise use formula
-        else:
-            return K2 * diff / abs(diff[0]**2 + diff[1]**2)
+        return diff / abs(diff[0]**2 + diff[1]**2)
 
 
-    def calculate_attraction(self, pos_v, pos_u, K):
+    def calculate_attraction(self, pos_v, pos_u):
         """Calculate the attraction force between two nodes.
 
         Args:
             pos_v: Position of first node v
             pos_u: Position of second node u
-            K2: Optimal distance parameter
 
         """
-        diff = pos_v - pos_u
+        diff = pos_u - pos_v
 
-        # in case points overlap
-        if diff[0] == 0 and diff[1] == 0:
-            return [0, 0]
+        # in case points overlap exactly in either dimension
+        if diff[0] == 0:
+            diff[0] = 0.0001
+        if diff[1] == 0:
+            diff[1] = 0.0001
 
-        # otherwise use formula
-        else:
-            return math.sqrt(diff[0]**2 + diff[1]**2) * diff / K
+        return math.sqrt(diff[0]**2 + diff[1]**2) * diff
 
 
     def interpolate_nodes(self, new_layout):
@@ -417,21 +430,14 @@ class DynGraphPlot():
 
         """
 
-        # get old and new bounding box size [width, height]
-        old_box = np.ptp([node for node in self.layout.values()], 0)
-        new_box = np.ptp([node for node in new_layout.values()], 0)
-
-        # get scale factor, fraction of old and new box areas
-        scale = old_box[0] * old_box[1] / new_box[0] * old_box[1]
-
         # go through moved nodes
         for node in self.G.nodes:
             if (new_layout[node][0] != self.layout[node][0] or 
                 new_layout[node][1] != self.layout[node][1]):
 
                 # linearly interpolate last new with old
-                self.layout[node] = ((1 - self.G.node[node]['pin_weight'])
-                    * (new_layout[node] - self.layout[node])) * scale
+                self.layout[node] += ((1 - self.G.node[node]['pin_weight'])
+                    * (new_layout[node] - self.layout[node]))
 
 
     def draw(self):
