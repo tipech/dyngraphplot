@@ -29,6 +29,9 @@ from dyngraphplot import DynGraphPlot
 # create a random graph and plot it
 G = nx.fast_gnp_random_graph(50, 0.1)
 plot = DynGraphPlot(G)
+
+# pause until "Enter" is pressed, as mode is non-blocking by default
+input()
 ```
 
 And afterwards, to update the graph:
@@ -37,6 +40,9 @@ And afterwards, to update the graph:
 new_nodes = [50,51]
 new_edges = [(50,20),(51,30), (50,51)]
 plot.update(new_nodes, new_edges)
+
+# wait before exiting
+input()
 ```
 
 Note that `update` returns the updated `networkx.Graph` object, so you can do:

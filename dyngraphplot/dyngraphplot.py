@@ -20,10 +20,15 @@
 
 """
 
-import os, math, copy, tkinter, matplotlib
+import os, math, copy, matplotlib
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+
+# suppress matplotlib warning caused by networkx draw()
+import warnings
+warnings.simplefilter("ignore",
+    category=matplotlib.cbook.MatplotlibDeprecationWarning)
 
 
 class DynGraphPlot():
@@ -89,9 +94,6 @@ class DynGraphPlot():
         if mode == 'save':
             if not os.path.isdir(save_dir):
                 os.mkdir(save_dir)
-            else:
-                raise(IsADirectoryError("Save directory already exists!"))
-
 
         # set display options and update with any user specified
         self.options = {'node_size': 800,
@@ -563,6 +565,9 @@ class DynGraphPlot():
 
         # if actual arguments were provided
         if self.plot_box != None:
+
+            # use tkinter to get window size (otherwise not needed)
+            import tkinter
 
             # get arguments
             x, y, width, height = self.plot_box
