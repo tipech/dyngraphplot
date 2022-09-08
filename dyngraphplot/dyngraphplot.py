@@ -278,18 +278,18 @@ class DynGraphPlot():
             if len(list(nx.all_neighbors(self.G, node))) > 0:
             
                 # calculate average pos_score of neighbors
-                scores = [self.G.node[neighbor]['pos_score']
+                scores = [self.G.nodes[neighbor]['pos_score']
                     for neighbor in nx.all_neighbors(self.G, node)]
                 neighbor_score = np.mean(scores)
 
                 # calculate pin weight
-                self.G.node[node]['pin_weight'] = (
-                    a * self.G.node[node]['pos_score']
+                self.G.nodes[node]['pin_weight'] = (
+                    a * self.G.nodes[node]['pos_score']
                      + (1 - a) * neighbor_score)
 
             # otherwise pin weight is just the node's pos_score
             else:
-                node_attributes = self.G.node[node]
+                node_attributes = self.G.nodes[node]
                 node_attributes['pin_weight'] = node_attributes['pos_score']
 
         D = {}    # Distance class dictionary (see paper)
@@ -335,21 +335,21 @@ class DynGraphPlot():
 
                 # set pin weight to zero for all nodes
                 for node in D[i]:
-                    self.G.node[node]['pin_weight'] = w_initial_pin
+                    self.G.nodes[node]['pin_weight'] = w_initial_pin
 
             # nodes beyond cutoff
             elif i > d_cutoff:
 
                 # set pin weight to one for all nodes
                 for node in D[i]:
-                    self.G.node[node]['pin_weight'] = 1
+                    self.G.nodes[node]['pin_weight'] = 1
 
             # nodes before cutoff
             else:
 
                 # set pin weight according to formula
                 for node in D[i]:
-                    self.G.node[node]['pin_weight'] = (w_initial_pin
+                    self.G.nodes[node]['pin_weight'] = (w_initial_pin
                         ** (1 - i / d_cutoff))
 
 
@@ -376,7 +376,7 @@ class DynGraphPlot():
             
             # force calculation loop, O(n^2) because no partitioning
             for v in self.G.nodes:
-                if frac_done > self.G.node[v]['pin_weight']:
+                if frac_done > self.G.nodes[v]['pin_weight']:
 
                     pos_v = new_layout[v] # get position of u
 
@@ -474,7 +474,7 @@ class DynGraphPlot():
                 new_layout[node][1] != self.layout[node][1]):
 
                 # linearly interpolate last new with old
-                self.layout[node] += ((1 - self.G.node[node]['pin_weight'])
+                self.layout[node] += ((1 - self.G.nodes[node]['pin_weight'])
                     * (new_layout[node] - self.layout[node]))
 
 
